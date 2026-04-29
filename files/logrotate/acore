@@ -1,0 +1,11 @@
+/home/vagrant/azerothcore/logs/*.log /home/vagrant/azerothcore/logs/*.txt {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 vagrant vagrant
+    su vagrant vagrant
+}

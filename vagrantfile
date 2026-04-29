@@ -1,0 +1,51 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Load environment variables from .env file
+if File.exist?(".env")
+  File.readlines(".env").each do |line|
+    next if line.strip.start_with?("#") || line.strip.empty?
+    values = line.split("=")
+    ENV[values[0].strip] = values[1].strip if values.length == 2
+  end
+end
+
+Vagrant.configure("2") do |config|
+  # Configuration de base - Ubuntu 22.04 LTS
+  config.vm.box = "bento/ubuntu-22.04"
+  config.vm.hostname = "azerothcore"
+
+  # Configuration réseau
+  # Port forwarding pour authserver (3724) et worldserver (8085)
+  config.vm.network "forwarded_port", guest: 3724, host: 3724, protocol: "tcp"
+  config.vm.network "forwarded_port", guest: 8085, host: 8085, protocol: "tcp"
+  config.vm.network "forwarded_port", guest: 3306, host: 3307 # MySQL (optionnel)
+
+  # Réseau privé pour accès direct (optionnel, décommenter si nécessaire)
+  # config.vm.network "private_network", ip: "192.168.56.10"
+
+  # Configuration des ressources VM
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = (ENV['VM_NAME'] || "AzerothCore-Server-wow")
+    vb.memory = (ENV['VM_RAM'] || 8192).to_i
+    vb.cpus = (ENV['VM_CPUS'] || 4).to_i
+
+    # Améliore la gestion multi-cœur et la stabilité
+    vb.customize ["modifyvm", :id, "--ioapic", "on"]
+
+    # Augmenter la VRAM pour éviter les warnings
+    vb.customize ["modifyvm", :id, "--vram", "16"]
+
+    # Utiliser le pilote réseau virtio pour de meilleures performances
+    vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
+
+    # Résoudre les problèmes de lenteur DNS dans la VM
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  end
+
+  # Dossier partagé pour les fichiers de données client
+  config.vm.synced_folder ".", "/vagrant"
+
+  # Provisioning
+  config.vm.provision "shell", path: "provision/setup.sh"
+end

@@ -1,0 +1,22 @@
+[Unit]
+Description=AzerothCore Authserver
+After=network.target mysql.service
+Requires=mysql.service
+StartLimitIntervalSec=120
+StartLimitBurst=6
+
+[Service]
+User=vagrant
+Type=simple
+WorkingDirectory=/home/vagrant/azerothcore/env/dist/bin
+ExecStart=/home/vagrant/azerothcore/env/dist/bin/authserver --config /home/vagrant/azerothcore/env/dist/etc/authserver.conf
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

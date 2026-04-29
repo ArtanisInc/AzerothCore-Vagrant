@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Vagrant local state and keys
+.vagrant/
+
+# Data wow
+data/data.zip
+
+# Runtime and backups
+backups/
+logs/
+*.log

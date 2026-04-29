@@ -1,0 +1,24 @@
+[Unit]
+Description=AzerothCore Worldserver
+After=network.target mysql.service acore-auth.service
+Requires=mysql.service acore-auth.service
+StartLimitIntervalSec=120
+StartLimitBurst=6
+
+[Service]
+User=vagrant
+Type=simple
+WorkingDirectory=/home/vagrant/azerothcore/env/dist/bin
+ExecStart=/home/vagrant/azerothcore/env/dist/bin/worldserver --config /home/vagrant/azerothcore/env/dist/etc/worldserver.conf
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+# Augmenter le timeout pour le premier lancement (extraction maps)
+TimeoutStartSec=600
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
