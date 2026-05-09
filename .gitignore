@@ -4,7 +4,7 @@
 # Vagrant local state and keys
 .vagrant/
 
-# Data wow
+# WoW data
 data/data.zip
 
 # Runtime and backups

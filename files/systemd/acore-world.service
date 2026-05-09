@@ -16,7 +16,7 @@ KillMode=mixed
 StandardInput=null
 StandardOutput=journal
 StandardError=journal
-# Augmenter le timeout pour le premier lancement (extraction maps)
+# Increase timeout for the first startup (map extraction)
 TimeoutStartSec=600
 TimeoutStopSec=20
 

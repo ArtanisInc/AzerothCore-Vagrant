@@ -9,7 +9,7 @@ suggested_command="$*"
 cleanup() {
     if [ "$restart_service" -eq 1 ]; then
         echo ""
-        echo "Redemarrage du service acore-world..."
+        echo "Restarting acore-world service..."
         sudo systemctl start acore-world >/dev/null 2>&1 || true
     fi
 }
@@ -17,13 +17,13 @@ trap cleanup EXIT
 
 cd "$AC_BIN_DIR"
 
-echo "Passage en mode console maintenance."
-echo "Le service acore-world va etre arrete temporairement."
+echo "Switching to maintenance console mode."
+echo "The acore-world service will be stopped temporarily."
 if [ -n "$suggested_command" ]; then
-    echo "Commande suggeree a executer une fois la console ouverte :"
+    echo "Suggested command to run once the console is open:"
     echo "  $suggested_command"
 fi
-echo "Quittez la console worldserver pour relancer le service automatiquement."
+echo "Exit the worldserver console to restart the service automatically."
 sudo systemctl stop acore-world >/dev/null 2>&1 || true
 restart_service=1
 exec ./worldserver

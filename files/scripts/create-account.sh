@@ -9,8 +9,8 @@ if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
 fi
 
 if ! pgrep -x "worldserver" >/dev/null 2>&1; then
-    echo "[ERROR] Process worldserver introuvable."
-    echo "Attendez que le service soit disponible (acore-status / acore-health), puis reessayez."
+    echo "[ERROR] worldserver process not found."
+    echo "Wait until the service is available (acore-status / acore-health), then try again."
     exit 1
 fi
 
@@ -18,14 +18,14 @@ username="$1"
 password="$2"
 
 if ! [[ "$username" =~ ^[A-Za-z0-9_]{1,16}$ ]]; then
-    echo "[ERROR] username invalide. Utilisez uniquement [A-Za-z0-9_] (1-16 chars)."
+    echo "[ERROR] invalid username. Use only [A-Za-z0-9_] (1-16 chars)."
     exit 1
 fi
 
 username_sql="$(printf "%s" "$username" | sed "s/'/''/g")"
 password_sql="$(printf "%s" "$password" | sed "s/'/''/g")"
 
-echo "Creation du compte '$username' via DB auth..."
+echo "Creating account '$username' via auth DB..."
 
 # Detect schema flavor (legacy sha_pass_hash vs SRP6 salt/verifier)
 has_sha_pass_hash=$(MYSQL_PWD="$DB_PASS" mysql -Nse "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='acore_auth' AND TABLE_NAME='account' AND COLUMN_NAME='sha_pass_hash';" -u "$DB_USER" -h 127.0.0.1 || echo 0)
@@ -59,9 +59,9 @@ PY
 
     MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_auth -e "INSERT INTO account (username, salt, verifier, reg_mail, email) VALUES (UPPER('$username_sql'), UNHEX('$salt_hex'), UNHEX('$verifier_hex'), '', '') ON DUPLICATE KEY UPDATE salt=VALUES(salt), verifier=VALUES(verifier);"
 else
-    echo "[ERROR] Schema account non reconnu: ni sha_pass_hash ni salt/verifier detectes."
+    echo "[ERROR] Unrecognized account schema: neither sha_pass_hash nor salt/verifier detected."
     exit 1
 fi
 
-echo "[OK] Compte cree/mis a jour: $username"
-echo "[INFO] Attribuez les droits GM si besoin via SQL sur acore_auth.account_access."
+echo "[OK] Account created/updated: $username"
+echo "[INFO] Assign GM rights if needed via SQL on acore_auth.account_access."

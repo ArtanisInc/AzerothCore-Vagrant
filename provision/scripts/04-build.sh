@@ -4,7 +4,7 @@ set -Eeuo pipefail
 source /vagrant/provision/scripts/00-env.sh
 
 echo "========================================"
-echo "Compilation d'AzerothCore"
+echo "Building AzerothCore"
 echo "========================================"
 
 mkdir -p "$AC_CODE_DIR/build"
@@ -36,11 +36,11 @@ make -j"$CPU_COUNT"
 echo "--- Installation ---"
 make install
 
-echo "[OK] Compilation et installation terminees."
+echo "[OK] Build and installation complete."
 
 if [ -f "$AC_BIN_DIR/worldserver" ] && [ -f "$AC_BIN_DIR/authserver" ]; then
-    echo "[OK] Binaires authserver et worldserver prets."
+    echo "[OK] authserver and worldserver binaries ready."
 else
-    echo "[ERROR] Echec de la compilation."
+    echo "[ERROR] Build failed."
     exit 1
 fi

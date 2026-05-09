@@ -63,18 +63,18 @@ resolve_ahbot_guids() {
     q_fallback="SELECT GROUP_CONCAT(guid ORDER BY guid SEPARATOR ',') FROM (SELECT guid FROM acore_characters.characters ORDER BY guid LIMIT 3) t;"
 
     if ! command -v mysql >/dev/null 2>&1; then
-        echo "[WARN] mysql client introuvable; AuctionHouseBot.GUIDs non modifie"
+        echo "[WARN] mysql client not found; AuctionHouseBot.GUIDs not changed"
         return 1
     fi
 
     if guids=$(MYSQL_PWD="$DB_PASS" mysql -N -s -h "$mysql_host" -P "$mysql_port" -u "$DB_USER" -e "$q_account1" 2>/dev/null); then
         :
     else
-        echo "[WARN] Echec requete GUIDs account=1; fallback global AHBot"
+        echo "[WARN] GUID query failed for account=1; using global AHBot fallback"
         if guids=$(MYSQL_PWD="$DB_PASS" mysql -N -s -h "$mysql_host" -P "$mysql_port" -u "$DB_USER" -e "$q_fallback" 2>/dev/null); then
             :
         else
-            echo "[WARN] Echec requete fallback GUIDs AHBot; AuctionHouseBot.GUIDs non modifie"
+            echo "[WARN] AHBot fallback GUID query failed; AuctionHouseBot.GUIDs not changed"
             return 1
         fi
     fi
@@ -90,58 +90,58 @@ resolve_ahbot_guids() {
             return 0
         fi
     else
-        echo "[WARN] Echec requete fallback GUIDs AHBot; AuctionHouseBot.GUIDs non modifie"
+        echo "[WARN] AHBot fallback GUID query failed; AuctionHouseBot.GUIDs not changed"
         return 1
     fi
 
-    echo "[WARN] Aucun personnage trouve; AuctionHouseBot.GUIDs non modifie"
+    echo "[WARN] No character found; AuctionHouseBot.GUIDs not changed"
     return 1
 }
 
 echo "========================================"
-echo "Telechargement des donnees client"
+echo "Downloading client data"
 echo "========================================"
 
 cd "$AC_BIN_DIR"
 
-# Dossier de cache sur l'hote
+# Cache directory on the host
 HOST_DATA_DIR="/vagrant/data"
 mkdir -p "$HOST_DATA_DIR"
 
 if [ ! -f "data-version" ]; then
   if [ ! -f "$HOST_DATA_DIR/data.zip" ]; then
-    echo "Telechargement des fichiers de donnees vers le cache hote..."
+    echo "Downloading data files to the host cache..."
     if ! timeout 7200 wget -q --show-progress -O "$HOST_DATA_DIR/data.zip" https://github.com/wowgaming/client-data/releases/download/v19/data.zip; then
-      echo "[ERROR] Telechargement echoue"
+      echo "[ERROR] Download failed"
       exit 1
     fi
-    echo "[OK] Telechargement reussi."
+    echo "[OK] Download succeeded."
   else
-    echo "[OK] Fichier data.zip trouve dans le cache hote."
+    echo "[OK] data.zip found in host cache."
   fi
 
-  echo "Extraction des donnees..."
+  echo "Extracting data..."
   if ! unzip -qo "$HOST_DATA_DIR/data.zip" -d .; then
-    echo "[ERROR] Extraction echouee"
+    echo "[ERROR] Extraction failed"
     exit 1
   fi
   touch data-version
-  echo "[OK] Fichiers de donnees extraits."
+  echo "[OK] Data files extracted."
 else
-  echo "[OK] Fichiers de donnees deja presents dans la VM."
+  echo "[OK] Data files already present in the VM."
 fi
 
 echo "========================================"
-echo "Configuration des fichiers .conf"
+echo "Configuring .conf files"
 echo "========================================"
 
 cd "$AC_CONF_DIR"
 
-[ ! -f "authserver.conf" ] && cp authserver.conf.dist authserver.conf && echo "[OK] authserver.conf cree"
-[ ! -f "worldserver.conf" ] && cp worldserver.conf.dist worldserver.conf && echo "[OK] worldserver.conf cree"
-[ ! -f "dbimport.conf" ] && cp dbimport.conf.dist dbimport.conf && echo "[OK] dbimport.conf cree"
+[ ! -f "authserver.conf" ] && cp authserver.conf.dist authserver.conf && echo "[OK] authserver.conf created"
+[ ! -f "worldserver.conf" ] && cp worldserver.conf.dist worldserver.conf && echo "[OK] worldserver.conf created"
+[ ! -f "dbimport.conf" ] && cp dbimport.conf.dist dbimport.conf && echo "[OK] dbimport.conf created"
 
-# Synchronisation explicite des credentials DB depuis .env (avec fallback si cle absente)
+# Explicit DB credential sync from .env (with fallback if the key is missing)
 ensure_conf_kv authserver.conf "LoginDatabaseInfo" "\"127.0.0.1;3306;$DB_USER;$DB_PASS;acore_auth\""
 ensure_conf_kv worldserver.conf "LoginDatabaseInfo" "\"127.0.0.1;3306;$DB_USER;$DB_PASS;acore_auth\""
 ensure_conf_kv worldserver.conf "WorldDatabaseInfo" "\"127.0.0.1;3306;$DB_USER;$DB_PASS;acore_world\""
@@ -170,20 +170,20 @@ ensure_conf_kv worldserver.conf "PlayerSaveInterval" "300000"
 ensure_conf_kv worldserver.conf "PlayerLimit" "0"
 ensure_conf_kv worldserver.conf "LeaveGroupOnLogout.Enabled" "1"
 
-# Activation des modules
-echo "Activation des configurations des modules..."
+# Module activation
+echo "Enabling module configurations..."
 cd modules/
 shopt -s nullglob
 for f in *.dist; do
     target="${f%.dist}"
     if [ ! -f "$target" ]; then
         cp "$f" "$target"
-        echo "[OK] Module active : $target"
+        echo "[OK] Module enabled: $target"
     fi
 done
 shopt -u nullglob
 
-# Synchronisation DB pour mod-playerbots (prioritaire sur worldserver.conf)
+# DB sync for mod-playerbots (takes precedence over worldserver.conf)
 if [ -f "playerbots.conf" ]; then
     ensure_conf_kv playerbots.conf "PlayerbotsDatabaseInfo" "\"127.0.0.1;3306;$DB_USER;$DB_PASS;acore_playerbots\""
     ensure_conf_kv playerbots.conf "AiPlayerbot.Enabled" "1"
@@ -257,7 +257,7 @@ if [ -f "playerbots.conf" ]; then
     ensure_conf_kv playerbots.conf "PlayerbotsDatabase.SynchThreads" "2"
 fi
 
-# Parametres Bot Level Brackets (si module present)
+# Bot Level Brackets settings (if module is present)
 if [ -f "mod_player_bot_level_brackets.conf" ]; then
     ensure_conf_kv mod_player_bot_level_brackets.conf "BotLevelBrackets.Enabled" "1"
     ensure_conf_kv mod_player_bot_level_brackets.conf "BotLevelBrackets.FullDebugMode" "0"
@@ -330,9 +330,9 @@ if [ -f "mod_player_bot_level_brackets.conf" ]; then
     ensure_conf_kv mod_player_bot_level_brackets.conf "BotLevelBrackets.Horde.Range9.Pct" "6"
 fi
 
-# Parametres Transmogrification (si module present)
+# Transmogrification settings (if module is present)
 if [ -f "transmog.conf" ]; then
-    # Utiliser ensure_conf_kv (idempotent) pour eviter les cles dupliquees
+    # Use ensure_conf_kv (idempotent) to avoid duplicate keys
     ensure_conf_kv transmog.conf "Transmogrification.UseVendorInterface" "1"
     ensure_conf_kv transmog.conf "Transmogrification.ScaledCostModifier" "0"
     ensure_conf_kv transmog.conf "Transmogrification.AllowPoor" "1"
@@ -353,44 +353,44 @@ if [ -f "transmog.conf" ]; then
     ensure_conf_kv transmog.conf "Transmogrification.SetCostModifier" "0"
 fi
 
-# Parametres Reagent Bank Account (si module present)
+# Reagent Bank Account settings (if module is present)
 if [ -f "mod_reagent_bank_account.conf" ]; then
     ensure_conf_kv mod_reagent_bank_account.conf "ReagentBankAccount.Enable" "1"
 fi
 
-# Parametres Daily Reset (si module present)
+# Daily Reset settings (if module is present)
 DAILY_RESET_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod_daily_reset.conf" "daily-reset.conf" "daily_reset.conf" || true)"
 if [ -n "${DAILY_RESET_MODULE_CONF:-}" ]; then
     ensure_conf_kv "$DAILY_RESET_MODULE_CONF" "DailyReset.Enable" "1"
     ensure_conf_kv "$DAILY_RESET_MODULE_CONF" "DailyReset.Enabled" "1"
 fi
 
-# Parametres Fly Anywhere (si module present)
+# Fly Anywhere settings (if module is present)
 FLY_ANYWHERE_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "fly-anywhere.conf" "mod_fly_anywhere.conf" || true)"
 if [ -n "${FLY_ANYWHERE_MODULE_CONF:-}" ]; then
     ensure_conf_kv "$FLY_ANYWHERE_MODULE_CONF" "FlyAnywhere.Enabled" "true"
 fi
 
-# Resolution robuste des fichiers de configuration modules (casse variable)
+# Robust module configuration file resolution (case may vary)
 AHBOT_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod_ahbot.conf" "AuctionHouseBot.conf" "ahbot.conf" || true)"
 AUTOBALANCE_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "AutoBalance.conf" "mod_autobalance.conf" "autobalance.conf" || true)"
 
 cd ..
 
 echo "========================================"
-echo "Application des Patches"
+echo "Applying patches"
 echo "========================================"
 
 REAGENT_BANK_NPC_SQL="$AC_CODE_DIR/modules/mod-reagent-bank-account/data/sql/db-world/base/mod_reagent_bank_account_NPC.sql"
 if [ -f "$REAGENT_BANK_NPC_SQL" ]; then
     if grep -q "mechanic_immune_mask" "$REAGENT_BANK_NPC_SQL"; then
         sed -i 's/mechanic_immune_mask/CreatureImmunitiesId/g' "$REAGENT_BANK_NPC_SQL"
-        echo "[OK] Compatibilite SQL mod-reagent-bank-account appliquee (mechanic_immune_mask -> CreatureImmunitiesId)"
+        echo "[OK] mod-reagent-bank-account SQL compatibility applied (mechanic_immune_mask -> CreatureImmunitiesId)"
     else
-        echo "[OK] Compatibilite SQL mod-reagent-bank-account deja a jour"
+        echo "[OK] mod-reagent-bank-account SQL compatibility already up to date"
     fi
 else
-    echo "[WARN] SQL mod-reagent-bank-account introuvable: $REAGENT_BANK_NPC_SQL"
+    echo "[WARN] mod-reagent-bank-account SQL not found: $REAGENT_BANK_NPC_SQL"
 fi
 
 ensure_conf_kv worldserver.conf "PlayerbotsDatabaseInfo" "\"127.0.0.1;3306;$DB_USER;$DB_PASS;acore_playerbots\""
@@ -404,7 +404,7 @@ ensure_conf_kv worldserver.conf "SkillGain.Crafting" "2"
 ensure_conf_kv worldserver.conf "SkillGain.Gathering" "2"
 ensure_conf_kv worldserver.conf "SkillGain.Weapon" "5"
 ensure_conf_kv worldserver.conf "SkillGain.Defense" "5"
-echo "[OK] Patch Rates applique"
+echo "[OK] Rates patch applied"
 
 if [ -n "${AHBOT_MODULE_CONF:-}" ]; then
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.DEBUG" "false"
@@ -414,9 +414,9 @@ ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.EnableSeller" "true"
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Buyer.Enabled" "false"
 if AHBOT_GUIDS="$(resolve_ahbot_guids)"; then
     ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.GUIDs" "$AHBOT_GUIDS"
-    echo "[OK] AuctionHouseBot.GUIDs detecte(s): $AHBOT_GUIDS"
+    echo "[OK] AuctionHouseBot.GUIDs detected: $AHBOT_GUIDS"
 else
-    echo "[WARN] Impossible de determiner AuctionHouseBot.GUIDs automatiquement; valeur existante conservee"
+    echo "[WARN] Unable to determine AuctionHouseBot.GUIDs automatically; existing value kept"
 fi
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.ItemsPerCycle" "575"
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Alliance.MinItems" "15000"
@@ -425,9 +425,9 @@ ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Horde.MinItems" "15000"
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Horde.MaxItems" "35000"
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Neutral.MinItems" "15000"
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.Neutral.MaxItems" "35000"
-echo "[OK] Patch AHBot applique (${AHBOT_MODULE_CONF})"
+echo "[OK] AHBot patch applied (${AHBOT_MODULE_CONF})"
 else
-echo "[WARN] Fichier conf AHBot introuvable dans $AC_CONF_DIR/modules (candidats: mod_ahbot.conf, AuctionHouseBot.conf, ahbot.conf)"
+echo "[WARN] AHBot config file not found in $AC_CONF_DIR/modules (candidates: mod_ahbot.conf, AuctionHouseBot.conf, ahbot.conf)"
 fi
 
 if [ -n "${AUTOBALANCE_MODULE_CONF:-}" ]; then
@@ -441,13 +441,13 @@ ensure_conf_kv "$AUTOBALANCE_MODULE_CONF" "AutoBalance.40.Man.Instance" "1"
 ensure_conf_kv "$AUTOBALANCE_MODULE_CONF" "AutoBalance.InflectionPoint" "0.5"
 ensure_conf_kv "$AUTOBALANCE_MODULE_CONF" "AutoBalance.BossModifier.Health" "1.0"
 ensure_conf_kv "$AUTOBALANCE_MODULE_CONF" "AutoBalance.BossModifier.Damage" "0.8"
-echo "[OK] Patch AutoBalance applique (${AUTOBALANCE_MODULE_CONF})"
+echo "[OK] AutoBalance patch applied (${AUTOBALANCE_MODULE_CONF})"
 else
-echo "[WARN] Fichier conf AutoBalance introuvable dans $AC_CONF_DIR/modules (candidats: AutoBalance.conf, mod_autobalance.conf, autobalance.conf)"
+echo "[WARN] AutoBalance config file not found in $AC_CONF_DIR/modules (candidates: AutoBalance.conf, mod_autobalance.conf, autobalance.conf)"
 fi
 
-# Reparation des permissions
+# Permission repair
 sudo chown -R vagrant:vagrant /home/vagrant/azerothcore
 chmod 644 *.conf 2>/dev/null || true
 chmod 644 modules/*.conf 2>/dev/null || true
-echo "[OK] Permissions et configurations terminees"
+echo "[OK] Permissions and configuration complete"

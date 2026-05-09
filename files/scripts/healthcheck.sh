@@ -90,17 +90,17 @@ check_worldserver_state() {
   fi
 
   if [ "$ready_seen" -eq 1 ]; then
-    echo "[FAIL] worldserver post-ready indisponible (port ${WORLD_PORT} ferme apres ready)"
+    echo "[FAIL] worldserver unavailable after ready marker (port ${WORLD_PORT} closed after ready)"
     FAILED=1
     return 0
   fi
 
   if [ "$has_process" -eq 1 ] && [ "$log_recent" -eq 1 ]; then
-    echo "[WARN] worldserver STARTING (port ${WORLD_PORT} ferme, log recent <=3m)"
+    echo "[WARN] worldserver STARTING (port ${WORLD_PORT} closed, recent log <=3m)"
     return 0
   fi
 
-  echo "[FAIL] worldserver indisponible (port ${WORLD_PORT} ferme, pas de progression log <=3m ou process absent)"
+  echo "[FAIL] worldserver unavailable (port ${WORLD_PORT} closed, no log progress <=3m or process missing)"
   FAILED=1
 }
 
@@ -108,14 +108,14 @@ check_recent_log_marker() {
   local file="$1"
   local label="$2"
   if [ ! -f "$file" ]; then
-    echo "[WARN] log ${label} absent (${file})"
+    echo "[WARN] log ${label} missing (${file})"
     return 0
   fi
 
   if find "$file" -mmin -15 -print -quit | grep -q .; then
     echo "[OK] log ${label} recent"
   else
-    echo "[WARN] log ${label} non recent (>15m)"
+    echo "[WARN] log ${label} stale (>15m)"
   fi
 }
 

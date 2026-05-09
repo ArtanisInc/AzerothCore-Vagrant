@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 source /vagrant/provision/scripts/00-env.sh
 
-echo "Mise a jour du code source..."
+echo "Updating source code..."
 cd "$AC_CODE_DIR"
 if [ -n "${ACORE_REF:-}" ]; then
     git fetch --depth 1 origin "$ACORE_REF"
@@ -12,7 +12,7 @@ else
     git pull --ff-only origin "$ACORE_BRANCH"
 fi
 
-echo "Mise a jour des modules..."
+echo "Updating modules..."
 cd modules
 for d in */; do
     if [ -d "$d/.git" ]; then
@@ -68,4 +68,4 @@ for d in */; do
     fi
 done
 
-echo "[OK] Mise a jour terminee. Recompilez si necessaire."
+echo "[OK] Update complete. Recompile if needed."

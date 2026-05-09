@@ -8,7 +8,7 @@ echo "Precheck SQL world IDs (modules)"
 echo "========================================"
 
 if ! command -v mysql >/dev/null 2>&1; then
-  echo "[ERROR] Client mysql introuvable. Precheck impossible."
+  echo "[ERROR] mysql client not found. Precheck impossible."
   exit 1
 fi
 
@@ -16,13 +16,13 @@ DB_HOST_CHECK="${DB_HOST:-127.0.0.1}"
 MYSQL_BASE=(env MYSQL_PWD="$DB_PASS" mysql -u"$DB_USER" -h "$DB_HOST_CHECK" --protocol=tcp --batch --skip-column-names)
 
 if ! "${MYSQL_BASE[@]}" -e "SELECT 1" acore_world >/dev/null 2>&1; then
-  echo "[ERROR] Impossible de joindre MySQL/acore_world avec les credentials courants."
+  echo "[ERROR] Unable to connect to MySQL/acore_world with current credentials."
   exit 1
 fi
 
 MODULES_DIR="$AC_CODE_DIR/modules"
 if [ ! -d "$MODULES_DIR" ]; then
-  echo "[ERROR] Dossier modules introuvable: $MODULES_DIR"
+  echo "[ERROR] Modules directory not found: $MODULES_DIR"
   exit 1
 fi
 
@@ -51,7 +51,7 @@ for mod in "${target_modules[@]}"; do
 done
 
 if [ "${#sql_files[@]}" -eq 0 ]; then
-  echo "[OK] Aucun SQL cible trouve pour precheck."
+  echo "[OK] No target SQL found for precheck."
   exit 0
 fi
 
@@ -89,7 +89,7 @@ for file in "${sql_files[@]}"; do
 done
 
 if [ ! -s "$tmp_candidates" ]; then
-  echo "[OK] Aucun INSERT ID numerique detecte sur tables cibles."
+  echo "[OK] No numeric INSERT ID detected on target tables."
   exit 0
 fi
 
@@ -111,14 +111,14 @@ while IFS=$'\t' read -r module file table id; do
   checked[$key]=1
 
   if [ "$exists" = "1" ]; then
-    echo "[ERROR] Conflit ID potentiel detecte: module=$module file=$file table=$table id=$id"
+    echo "[ERROR] Potential ID conflict detected: module=$module file=$file table=$table id=$id"
     conflict=1
   fi
 done < "$tmp_candidates"
 
 if [ "$conflict" -ne 0 ]; then
-  echo "[ERROR] Precheck SQL world IDs echoue. Provisioning bloque."
+  echo "[ERROR] SQL world ID precheck failed. Provisioning blocked."
   exit 1
 fi
 
-echo "[OK] Precheck SQL world IDs termine sans conflit detecte."
+echo "[OK] SQL world ID precheck completed with no detected conflict."

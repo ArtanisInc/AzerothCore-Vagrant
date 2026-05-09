@@ -4,7 +4,7 @@ set -Eeuo pipefail
 source /vagrant/provision/scripts/00-env.sh
 
 echo "========================================"
-echo "Optimisation sysctl reseau"
+echo "Network sysctl optimization"
 echo "========================================"
 
 SYSCTL_FILE="/etc/sysctl.d/99-azerothcore.conf"
@@ -26,19 +26,19 @@ net.ipv4.tcp_tw_reuse=1
 vm.swappiness=1
 SYSCTL_CONF
 
-echo "[OK] Configuration ecrite: $SYSCTL_FILE"
+echo "[OK] Configuration written: $SYSCTL_FILE"
 
 if [ -f /proc/sys/net/ipv4/tcp_available_congestion_control ] && ! grep -qw bbr /proc/sys/net/ipv4/tcp_available_congestion_control; then
-    echo "[WARN] BBR non disponible sur ce noyau. Application des autres parametres uniquement."
+    echo "[WARN] BBR is not available on this kernel. Applying other parameters only."
     if sysctl -p "$SYSCTL_FILE" --ignore 2>/dev/null; then
-        echo "[OK] Parametres sysctl appliques (hors BBR)."
+        echo "[OK] sysctl parameters applied (except BBR)."
     else
-        echo "[WARN] Application partielle des parametres sysctl."
+        echo "[WARN] Partial sysctl parameter application."
     fi
 else
     if sysctl --system; then
-        echo "[OK] Parametres sysctl appliques."
+        echo "[OK] sysctl parameters applied."
     else
-        echo "[WARN] Echec partiel lors de l'application sysctl --system."
+        echo "[WARN] Partial failure while applying sysctl --system."
     fi
 fi

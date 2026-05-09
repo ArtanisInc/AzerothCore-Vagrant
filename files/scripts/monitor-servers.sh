@@ -7,32 +7,32 @@ echo "----------------------------------------"
 echo "AzerothCore - Monitoring"
 echo "----------------------------------------"
 
-echo "STATUT DES SERVEURS:"
+echo "SERVER STATUS:"
 if pgrep -x "authserver" > /dev/null; then
-  echo "  [OK] Authserver: ACTIF"
+  echo "  [OK] Authserver: ACTIVE"
 else
-  echo "  [FAIL] Authserver: INACTIF"
+  echo "  [FAIL] Authserver: INACTIVE"
 fi
 
 if pgrep -x "worldserver" > /dev/null; then
-  echo "  [OK] Worldserver: ACTIF"
+  echo "  [OK] Worldserver: ACTIVE"
 else
-  echo "  [FAIL] Worldserver: INACTIF"
+  echo "  [FAIL] Worldserver: INACTIVE"
 fi
 
 echo ""
-echo "UTILISATION RESSOURCES:"
+echo "RESOURCE USAGE:"
 USED_MEM=$(free -h | grep Mem | awk '{print $3}')
 TOTAL_MEM=$(free -h | grep Mem | awk '{print $2}')
-echo "  Memoire: $USED_MEM / $TOTAL_MEM"
+echo "  Memory: $USED_MEM / $TOTAL_MEM"
 echo "  CPU: $(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')%"
 
 echo ""
 echo "MYSQL:"
 if systemctl is-active --quiet mysql; then
-  echo "  [OK] Statut: ACTIF"
+  echo "  [OK] Status: ACTIVE"
 else
-  echo "  [FAIL] Statut: INACTIF"
+  echo "  [FAIL] Status: INACTIVE"
 fi
 
 echo "----------------------------------------"

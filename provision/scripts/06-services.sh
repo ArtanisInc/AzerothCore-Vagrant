@@ -5,10 +5,10 @@ source /vagrant/provision/scripts/00-env.sh
 
 AHBOT_ACCOUNT_NAME="${AHBOT_ACCOUNT_NAME:-ahbot}"
 AHBOT_ACCOUNT_PASS="${AHBOT_ACCOUNT_PASS:-ahbot123!}"
-AHBOT_CHARACTER_NAME="${AHBOT_CHARACTER_NAME:-Marchand}"
+AHBOT_CHARACTER_NAME="${AHBOT_CHARACTER_NAME:-Vendor}"
 
 echo "========================================"
-echo "Configuration Systemd"
+echo "Configuring Systemd"
 echo "========================================"
 
 cp /vagrant/files/systemd/acore-auth.service /etc/systemd/system/
@@ -18,10 +18,10 @@ cp /vagrant/files/logrotate/acore /etc/logrotate.d/acore
 systemctl daemon-reload
 systemctl enable acore-auth
 systemctl enable acore-world
-echo "[OK] Services Systemd installes."
+echo "[OK] Systemd services installed."
 
 echo "========================================"
-echo "Installation des scripts"
+echo "Installing scripts"
 echo "========================================"
 
 mkdir -p "$AC_LOG_DIR"
@@ -32,7 +32,7 @@ cp /vagrant/files/scripts/*.py /home/vagrant/ 2>/dev/null || true
 chmod +x /home/vagrant/*.sh /home/vagrant/*.py 2>/dev/null || true
 chown vagrant:vagrant /home/vagrant/*
 
-echo "[OK] Scripts de gestion installes."
+echo "[OK] Management scripts installed."
 
 cat > /home/vagrant/.bash_aliases <<ALIASES
 alias acore-start='./start-servers.sh'
@@ -56,11 +56,12 @@ alias acore-backup='./backup-db.sh'
 alias acore-update='./update-core.sh'
 alias acore-health='./healthcheck.sh'
 alias acore-metrics='./metrics-snapshot.sh'
+alias acore-diagnose='./diagnose-server.sh'
 alias acore-watch='./watch-services.sh'
 ALIASES
 chown vagrant:vagrant /home/vagrant/.bash_aliases
 
-# Optional periodic healthcheck via cron (non bloquant)
+# Optional periodic healthcheck via cron (non-blocking)
 cat > /etc/cron.d/acore-health <<'CRON'
 */5 * * * * vagrant /home/vagrant/healthcheck.sh >> /home/vagrant/azerothcore/logs/health.log 2>&1
 CRON
@@ -95,11 +96,11 @@ start_service_with_retry() {
 
     retries=$((retries - 1))
     if [ "$retries" -le 0 ]; then
-      echo "[ERROR] Impossible de demarrer $service"
+      echo "[ERROR] Unable to start $service"
       return 1
     fi
 
-    echo "[WARN] Nouvelle tentative de demarrage pour $service..."
+    echo "[WARN] Retrying startup for $service..."
     sleep 3
   done
 }
@@ -114,11 +115,11 @@ mysql_exec_with_retry() {
 
     retries=$((retries - 1))
     if [ "$retries" -le 0 ]; then
-      echo "[ERROR] Requete MySQL echouee apres plusieurs tentatives"
+      echo "[ERROR] MySQL query failed after several attempts"
       return 1
     fi
 
-    echo "[WARN] Nouvelle tentative MySQL..."
+    echo "[WARN] Retrying MySQL..."
     sleep 2
   done
 }
@@ -178,7 +179,7 @@ worldserver_cmd_try() {
   local payload
 
   if ! command -v curl >/dev/null 2>&1; then
-    echo "[WARN] curl introuvable: commande worldserver ignoree: $cmd"
+    echo "[WARN] curl not found: worldserver command skipped: $cmd"
     return 1
   fi
 
@@ -189,11 +190,11 @@ worldserver_cmd_try() {
       -H 'SOAPAction: "urn:AC#executeCommand"' \
       --data "$payload" \
       "http://127.0.0.1:${soap_port}/" >/dev/null 2>&1; then
-    echo "[OK] Commande worldserver executee: $cmd"
+    echo "[OK] worldserver command executed: $cmd"
     return 0
   fi
 
-  echo "[WARN] Echec commande worldserver (SOAP): $cmd"
+  echo "[WARN] worldserver command failed (SOAP): $cmd"
   return 1
 }
 
@@ -225,10 +226,10 @@ verify_daily_reset_runtime() {
   fi
 
   if printf '%s' "$out" | grep -qi 'daily reset'; then
-    echo "[OK] mod-daily-reset actif (commande '.daily reset' detectee)."
+    echo "[OK] mod-daily-reset active ('.daily reset' command detected)."
   else
-    echo "[WARN] mod-daily-reset non confirme via SOAP (.help daily)."
-    echo "[WARN] Verifiez logs worldserver et chargement du module mod-daily-reset."
+    echo "[WARN] mod-daily-reset not confirmed via SOAP (.help daily)."
+    echo "[WARN] Check worldserver logs and mod-daily-reset module loading."
   fi
 }
 
@@ -283,40 +284,40 @@ ensure_ahbot_bootstrap() {
   echo "[INFO] Bootstrap AHBot: account='${account_name}', character='${character_name}'"
 
   if /home/vagrant/create-account.sh "$account_name" "$account_pass"; then
-    echo "[OK] Compte AHBot cree/mis a jour: ${account_name}"
+    echo "[OK] AHBot account created/updated: ${account_name}"
   else
-    echo "[WARN] Echec creation/mise a jour compte AHBot '${account_name}' (provisioning continue)"
+    echo "[WARN] Failed to create/update AHBot account '${account_name}' (provisioning continues)"
   fi
 
   account_id="$(get_account_id_by_name "$account_name")"
   if [ -z "$account_id" ]; then
-    echo "[WARN] Compte AHBot introuvable en DB auth; tentative de fallback GUID global"
+    echo "[WARN] AHBot account not found in auth DB; trying global GUID fallback"
     return 0
   fi
 
   if MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
       "SELECT 1 FROM acore_characters.characters WHERE account=${account_id} AND name='${character_name}' LIMIT 1;" | grep -q 1; then
-    echo "[OK] Personnage AHBot deja present: ${character_name} (account=${account_name})"
+    echo "[OK] AHBot character already present: ${character_name} (account=${account_name})"
     return 0
   fi
 
-  # AzerothCore ne fournit pas toujours la commande '.character create'.
-  # On evite les faux warnings en detectant d'abord la capacite.
+  # AzerothCore does not always provide the '.character create' command.
+  # Avoid false warnings by detecting capability first.
   character_help="$(worldserver_cmd_output ".help character" || true)"
   if printf '%s' "$character_help" | grep -q 'character create'; then
     if worldserver_cmd_try ".character create ${character_name} 1 1"; then
       sleep 2
       if MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
           "SELECT 1 FROM acore_characters.characters WHERE account=${account_id} AND name='${character_name}' LIMIT 1;" | grep -q 1; then
-        echo "[OK] Personnage AHBot cree: ${character_name}"
+        echo "[OK] AHBot character created: ${character_name}"
       else
-        echo "[WARN] Commande creation personnage envoyee mais personnage non detecte; fallback GUID sera utilise"
+        echo "[WARN] Character creation command sent but character not detected; GUID fallback will be used"
       fi
     else
-      echo "[WARN] Creation personnage AHBot via worldserver indisponible; fallback GUID sera utilise"
+      echo "[WARN] AHBot character creation via worldserver unavailable; GUID fallback will be used"
     fi
   else
-    echo "[INFO] Commande '.character create' indisponible sur ce core; fallback GUID sera utilise"
+    echo "[INFO] Command '.character create' unavailable on this core; GUID fallback will be used"
   fi
 }
 
@@ -326,22 +327,22 @@ configure_ahbot_guids() {
 
   ahbot_conf="$(resolve_module_conf_local "$AC_CONF_DIR/modules" "mod_ahbot.conf" "AuctionHouseBot.conf" "ahbot.conf" || true)"
   if [ -z "${ahbot_conf:-}" ]; then
-    echo "[WARN] Fichier conf AHBot introuvable; GUIDs non modifies"
+    echo "[WARN] AHBot config file not found; GUIDs not changed"
     return 0
   fi
 
   if guids="$(resolve_ahbot_guid_preferred "$AHBOT_ACCOUNT_NAME" "$AHBOT_CHARACTER_NAME")"; then
     ensure_conf_kv_local "$ahbot_conf" "AuctionHouseBot.GUIDs" "$guids"
-    echo "[OK] AuctionHouseBot.GUIDs configure: $guids"
+    echo "[OK] AuctionHouseBot.GUIDs configured: $guids"
   else
-    echo "[WARN] Impossible de resoudre AuctionHouseBot.GUIDs; valeur existante conservee"
+    echo "[WARN] Unable to resolve AuctionHouseBot.GUIDs; existing value kept"
   fi
 }
 
 refresh_ahbot_after_world_up() {
   local attempt
 
-  echo "[INFO] Refresh AHBot post-demarrage worldserver..."
+  echo "[INFO] Refreshing AHBot after worldserver startup..."
   worldserver_cmd_try ".ahbot reload" || true
 
   for attempt in 1 2 3; do
@@ -362,20 +363,20 @@ ensure_transmog_schema() {
   has_ua=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='acore_characters' AND TABLE_NAME='custom_unlocked_appearances';" 2>/dev/null || echo 0)
 
   if [ "$has_tm" -ge 1 ] && [ "$has_ua" -ge 1 ]; then
-    echo "[OK] Schema transmog deja present."
+    echo "[OK] Transmog schema already present."
     return 0
   fi
 
-  echo "[INFO] Tables transmog manquantes, import de trasmorg.sql..."
+  echo "[INFO] Transmog tables missing, importing trasmorg.sql..."
   MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_characters < "$transmog_sql"
 
   has_tm=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='acore_characters' AND TABLE_NAME='custom_transmogrification';" 2>/dev/null || echo 0)
   has_ua=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='acore_characters' AND TABLE_NAME='custom_unlocked_appearances';" 2>/dev/null || echo 0)
 
   if [ "$has_tm" -ge 1 ] && [ "$has_ua" -ge 1 ]; then
-    echo "[OK] Schema transmog repare."
+    echo "[OK] Transmog schema repaired."
   else
-    echo "[ERROR] Echec correction schema transmog (tables toujours manquantes)."
+    echo "[ERROR] Transmog schema fix failed (tables still missing)."
     return 1
   fi
 }
@@ -466,32 +467,32 @@ ensure_sql_applied_if_missing_local() {
   local has_table
 
   if [ ! -f "$sql_file" ]; then
-    echo "[WARN] SQL introuvable pour ${scope_label}: $sql_file"
+    echo "[WARN] SQL not found for ${scope_label}: $sql_file"
     return 0
   fi
 
   sentinel_table="$(extract_first_created_table_local "$sql_file")"
   if [ -z "$sentinel_table" ]; then
-    echo "[ERROR] SQL corrompu (${scope_label}): aucune table CREATE TABLE detectee dans $sql_file"
+    echo "[ERROR] Corrupt SQL (${scope_label}): no CREATE TABLE statement detected in $sql_file"
     return 1
   fi
 
   has_table=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='${db_name}' AND TABLE_NAME='${sentinel_table}';" 2>/dev/null || echo 0)
   if [ "$has_table" -ge 1 ]; then
-    echo "[OK] ${scope_label}: schema deja present (${db_name}.${sentinel_table})."
+    echo "[OK] ${scope_label}: schema already present (${db_name}.${sentinel_table})."
     return 0
   fi
 
-  echo "[INFO] ${scope_label}: schema manquant, import de $(basename "$sql_file")..."
+  echo "[INFO] ${scope_label}: schema missing, importing $(basename "$sql_file")..."
   MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 "$db_name" < "$sql_file"
 
   has_table=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='${db_name}' AND TABLE_NAME='${sentinel_table}';" 2>/dev/null || echo 0)
   if [ "$has_table" -ge 1 ]; then
-    echo "[OK] ${scope_label}: schema repare (${db_name}.${sentinel_table})."
+    echo "[OK] ${scope_label}: schema repaired (${db_name}.${sentinel_table})."
     return 0
   fi
 
-  echo "[ERROR] ${scope_label}: import SQL sans effet (table sentinelle ${db_name}.${sentinel_table} absente)."
+  echo "[ERROR] ${scope_label}: SQL import had no effect (sentinel table ${db_name}.${sentinel_table} missing)."
   return 1
 }
 
@@ -503,26 +504,26 @@ ensure_world_sql_applied_for_module_local() {
   local probe_count
 
   if [ ! -f "$sql_file" ]; then
-    echo "[WARN] SQL world introuvable pour ${scope_label}: $sql_file"
+    echo "[WARN] World SQL not found for ${scope_label}: $sql_file"
     return 0
   fi
 
   probe_count=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "$probe_sql" 2>/dev/null || echo 0)
   if [ "$probe_count" -ge "$expected_min" ]; then
-    echo "[OK] ${scope_label}: donnees world deja presentes (${probe_count} >= ${expected_min})."
+    echo "[OK] ${scope_label}: world data already present (${probe_count} >= ${expected_min})."
     return 0
   fi
 
-  echo "[INFO] ${scope_label}: module semble inactif (${probe_count} < ${expected_min}), import de $(basename "$sql_file")..."
+  echo "[INFO] ${scope_label}: module appears inactive (${probe_count} < ${expected_min}), importing $(basename "$sql_file")..."
   MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_world < "$sql_file"
 
   probe_count=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse "$probe_sql" 2>/dev/null || echo 0)
   if [ "$probe_count" -ge "$expected_min" ]; then
-    echo "[OK] ${scope_label}: donnees world reparees (${probe_count} >= ${expected_min})."
+    echo "[OK] ${scope_label}: world data repaired (${probe_count} >= ${expected_min})."
     return 0
   fi
 
-  echo "[ERROR] ${scope_label}: import SQL sans effet (${probe_count} < ${expected_min})."
+  echo "[ERROR] ${scope_label}: SQL import had no effect (${probe_count} < ${expected_min})."
   return 1
 }
 
@@ -570,10 +571,10 @@ ensure_module_strings() {
 wait_for_worldserver_console() {
   local retries=120
 
-  echo "Attente de la disponibilite du worldserver (max 360s)..."
+  echo "Waiting for worldserver availability (max 360s)..."
   while [ $retries -gt 0 ]; do
     if systemctl is-active --quiet acore-world && ss -ltn 2>/dev/null | grep -q ':8085 '; then
-      echo "[OK] Port worldserver detecte (8085)."
+      echo "[OK] worldserver port detected (8085)."
       return 0
     fi
 
@@ -583,7 +584,7 @@ wait_for_worldserver_console() {
   done
 
   echo ""
-  echo "[WARN] Worldserver non detecte de facon fiable apres 360s."
+  echo "[WARN] Worldserver not reliably detected after 360s."
   return 1
 }
 
@@ -591,12 +592,12 @@ wait_for_soap_ready() {
   local retries=100
   local out
 
-  echo "Attente de la disponibilite SOAP worldserver (max 300s)..."
+  echo "Waiting for worldserver SOAP availability (max 300s)..."
   while [ $retries -gt 0 ]; do
     if ss -ltn 2>/dev/null | grep -q ':7878 '; then
       out="$(worldserver_cmd_output ".server info" || true)"
       if [ -n "${out:-}" ] && printf '%s' "$out" | grep -qi 'executeCommandResponse'; then
-        echo "[OK] SOAP worldserver disponible."
+        echo "[OK] worldserver SOAP available."
         return 0
       fi
     fi
@@ -607,12 +608,12 @@ wait_for_soap_ready() {
   done
 
   echo ""
-  echo "[WARN] SOAP worldserver non disponible apres 300s."
+  echo "[WARN] worldserver SOAP unavailable after 300s."
   return 1
 }
 
 echo "========================================"
-echo "Finalisation & Admin"
+echo "Finalization & Admin"
 echo "========================================"
 
 start_service_with_retry acore-auth
@@ -623,15 +624,15 @@ start_service_with_retry acore-world
 
 wait_for_worldserver_console || true
 
-echo "Creation du compte 'admin'..."
+echo "Creating 'admin' account..."
 if MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_auth -Nse "SELECT 1 FROM account WHERE username='admin' LIMIT 1;" | grep -q 1; then
-  echo "[OK] Compte admin deja present."
+  echo "[OK] Admin account already present."
 else
   sleep 3
   if /home/vagrant/create-account.sh admin admin && /home/vagrant/set-gm.sh admin 3 -1; then
-    echo "[OK] Compte admin cree et GM applique via scripts DB."
+    echo "[OK] Admin account created and GM rights applied via DB scripts."
   else
-    echo "[WARN] Creation automatique du compte admin ignoree. Lancez ./create-account.sh puis ./set-gm.sh manuellement."
+    echo "[WARN] Automatic admin account creation skipped. Run ./create-account.sh then ./set-gm.sh manually."
   fi
 fi
 
@@ -641,24 +642,24 @@ if wait_for_soap_ready; then
   verify_daily_reset_runtime
   refresh_ahbot_after_world_up
 else
-  echo "[WARN] Verification mod-daily-reset et refresh AHBot ignores (SOAP indisponible)."
+  echo "[WARN] mod-daily-reset verification and AHBot refresh skipped (SOAP unavailable)."
 fi
 
 echo "========================================"
-echo "Configuration du Royaume"
+echo "Configuring realm"
 echo "========================================"
 
 EXT_IP="${EXTERNAL_IP:-}"
 
 if [ -z "$EXT_IP" ]; then
-  echo "[WARN] EXTERNAL_IP non defini: realm externe non modifie (provisioning continue)"
+  echo "[WARN] EXTERNAL_IP not set: external realm not changed (provisioning continues)"
 elif ! validate_external_ip "$EXT_IP"; then
-  echo "[WARN] EXTERNAL_IP invalide ('$EXT_IP'): realm externe non modifie (provisioning continue)"
+  echo "[WARN] Invalid EXTERNAL_IP ('$EXT_IP'): external realm not changed (provisioning continues)"
 else
   mysql_exec_with_retry acore_auth -e "UPDATE realmlist SET address='$EXT_IP', localAddress='127.0.0.1', localSubnetMask='255.255.255.0' WHERE id=1;"
   mysql_exec_with_retry acore_auth -e "DELETE FROM realmlist WHERE id=2;"
-  echo "[OK] Royaume configure ($EXT_IP / Local)"
+  echo "[OK] Realm configured ($EXT_IP / Local)"
 fi
 echo "========================================"
-echo "Installation terminee avec succes!"
+echo "Installation completed successfully!"
 echo "========================================"

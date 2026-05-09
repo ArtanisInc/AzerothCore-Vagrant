@@ -4,7 +4,7 @@ set -Eeuo pipefail
 source /vagrant/provision/scripts/00-env.sh
 
 echo "========================================"
-echo "Clonage du code source AzerothCore"
+echo "Cloning AzerothCore source code"
 echo "========================================"
 
 clone_repo_ref() {
@@ -13,28 +13,28 @@ clone_repo_ref() {
   local ref="${3:-}"
 
   if [ -d "$dest/.git" ]; then
-    echo "[OK] Repository deja present."
+    echo "[OK] Repository already present."
     return 0
   fi
 
   if [ -z "$ref" ]; then
-    echo "Clonage du repository (default branch)..."
+    echo "Cloning repository (default branch)..."
     git clone --depth 1 "$url" "$dest"
   else
-    echo "Clonage du repository (ref $ref)..."
+    echo "Cloning repository (ref $ref)..."
     git init "$dest"
     git -C "$dest" remote add origin "$url"
     git -C "$dest" fetch --depth 1 origin "$ref"
     git -C "$dest" checkout --detach FETCH_HEAD
   fi
 
-  echo "[OK] Repository clone avec succes."
+  echo "[OK] Repository cloned successfully."
 }
 
 clone_repo_ref "$ACORE_REPO" "$AC_CODE_DIR" "${ACORE_REF:-$ACORE_BRANCH}"
 
 echo "========================================"
-echo "Installation des modules"
+echo "Installing modules"
 echo "========================================"
 
 mkdir -p "$AC_CODE_DIR/modules"
@@ -61,11 +61,11 @@ for item in "${modules[@]}"; do
     IFS=";" read -r name url ref <<< "$item"
     if [ ! -d "$AC_CODE_DIR/modules/$name/.git" ]; then
       clone_repo_ref "$url" "$AC_CODE_DIR/modules/$name" "$ref" || {
-        echo "[WARN] Echec du clonage de $name"
+        echo "[WARN] Failed to clone $name"
         continue
       }
-      echo "[OK] Module $name clone."
+      echo "[OK] Module $name cloned."
     else
-      echo "[OK] Module $name deja present."
+      echo "[OK] Module $name already present."
     fi
 done

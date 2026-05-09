@@ -11,39 +11,39 @@ if File.exist?(".env")
 end
 
 Vagrant.configure("2") do |config|
-  # Configuration de base - Ubuntu 22.04 LTS
+  # Base configuration - Ubuntu 22.04 LTS
   config.vm.box = "bento/ubuntu-22.04"
   config.vm.hostname = "azerothcore"
 
-  # Configuration réseau
-  # Port forwarding pour authserver (3724) et worldserver (8085)
+  # Network configuration
+  # Port forwarding for authserver (3724) and worldserver (8085)
   config.vm.network "forwarded_port", guest: 3724, host: 3724, protocol: "tcp"
   config.vm.network "forwarded_port", guest: 8085, host: 8085, protocol: "tcp"
-  config.vm.network "forwarded_port", guest: 3306, host: 3307 # MySQL (optionnel)
+  config.vm.network "forwarded_port", guest: 3306, host: 3307 # MySQL (optional)
 
-  # Réseau privé pour accès direct (optionnel, décommenter si nécessaire)
+  # Private network for direct access (optional, uncomment if needed)
   # config.vm.network "private_network", ip: "192.168.56.10"
 
-  # Configuration des ressources VM
+  # VM resource configuration
   config.vm.provider "virtualbox" do |vb|
     vb.name = (ENV['VM_NAME'] || "AzerothCore-Server-wow")
     vb.memory = (ENV['VM_RAM'] || 8192).to_i
     vb.cpus = (ENV['VM_CPUS'] || 4).to_i
 
-    # Améliore la gestion multi-cœur et la stabilité
+    # Improve multi-core handling and stability
     vb.customize ["modifyvm", :id, "--ioapic", "on"]
 
-    # Augmenter la VRAM pour éviter les warnings
+    # Increase VRAM to avoid warnings
     vb.customize ["modifyvm", :id, "--vram", "16"]
 
-    # Utiliser le pilote réseau virtio pour de meilleures performances
+    # Use the virtio network driver for better performance
     vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
 
-    # Résoudre les problèmes de lenteur DNS dans la VM
+    # Fix slow DNS issues inside the VM
     vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
   end
 
-  # Dossier partagé pour les fichiers de données client
+  # Shared folder for client data files
   config.vm.synced_folder ".", "/vagrant"
 
   # Provisioning

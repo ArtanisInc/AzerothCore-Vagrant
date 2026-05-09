@@ -5,7 +5,7 @@ source /vagrant/provision/scripts/00-env.sh
 
 if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
     echo "Usage: acore-set-gm <username> <gmlevel> [realmId]"
-    echo "Exemple: acore-set-gm admin 3 -1"
+    echo "Example: acore-set-gm admin 3 -1"
     exit 1
 fi
 
@@ -14,32 +14,32 @@ gmlevel="$2"
 realm_id="${3:--1}"
 
 if ! [[ "$username" =~ ^[A-Za-z0-9_]{1,16}$ ]]; then
-    echo "[ERROR] username invalide. Utilisez uniquement [A-Za-z0-9_] (1-16 chars)."
+    echo "[ERROR] invalid username. Use only [A-Za-z0-9_] (1-16 chars)."
     exit 1
 fi
 
 if ! [[ "$gmlevel" =~ ^[0-9]+$ ]]; then
-    echo "[ERROR] gmlevel doit etre un entier >= 0"
+    echo "[ERROR] gmlevel must be an integer >= 0"
     exit 1
 fi
 
 if ! [[ "$realm_id" =~ ^-?[0-9]+$ ]]; then
-    echo "[ERROR] realmId doit etre un entier (ex: -1, 1, 2...)"
+    echo "[ERROR] realmId must be an integer (e.g. -1, 1, 2...)"
     exit 1
 fi
 
 username_sql="$(printf "%s" "$username" | sed "s/'/''/g")"
 
-echo "Attribution GM level $gmlevel a '$username' (RealmID=$realm_id)..."
+echo "Assigning GM level $gmlevel to '$username' (RealmID=$realm_id)..."
 
 account_id=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_auth -Nse "SELECT id FROM account WHERE username=UPPER('$username_sql') LIMIT 1;" || true)
 
 if [ -z "$account_id" ]; then
-    echo "[ERROR] Compte introuvable: $username"
-    echo "Creez-le d'abord avec: acore-create-account <username> <password>"
+    echo "[ERROR] Account not found: $username"
+    echo "Create it first with: acore-create-account <username> <password>"
     exit 1
 fi
 
 MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 acore_auth -e "INSERT INTO account_access (id, gmlevel, RealmID) VALUES ('$account_id', '$gmlevel', '$realm_id') ON DUPLICATE KEY UPDATE gmlevel=VALUES(gmlevel), RealmID=VALUES(RealmID);"
 
-echo "[OK] Droits GM appliques: user=$username id=$account_id level=$gmlevel realm=$realm_id"
+echo "[OK] GM rights applied: user=$username id=$account_id level=$gmlevel realm=$realm_id"
