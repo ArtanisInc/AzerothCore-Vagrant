@@ -22,7 +22,7 @@ clone_repo_ref() {
     git clone --depth 1 "$url" "$dest"
   else
     echo "Cloning repository (ref $ref)..."
-    git init "$dest"
+    git -c init.defaultBranch=main init "$dest"
     git -C "$dest" remote add origin "$url"
     git -C "$dest" fetch --depth 1 origin "$ref"
     git -C "$dest" checkout --detach FETCH_HEAD
