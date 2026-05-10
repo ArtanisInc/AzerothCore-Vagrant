@@ -4,31 +4,42 @@ set -Eeuo pipefail
 source /vagrant/provision/scripts/00-env.sh
 
 echo "Configuring AHBot-Plus..."
-echo "--- IMPORTANT: You must have created characters for the bot ---"
-read -p "Enter character GUIDs (comma-separated): " GUIDS
+echo "--- IMPORTANT: AHBot requires existing character GUIDs ---"
+echo "--- Recommended: log in as ${AHBOT_ACCOUNT_NAME:-ahbot}, create a dedicated AHBot character, then query its GUID. ---"
+
+GUIDS="${1:-}"
+if [ -z "$GUIDS" ]; then
+    read -p "Enter character GUIDs (comma-separated): " GUIDS
+fi
 
 if [ -n "$GUIDS" ]; then
-    if grep -q '^AuctionHouseBot.GUIDs' "$AC_CONF_DIR/worldserver.conf"; then
-        sed -i "s/^AuctionHouseBot.GUIDs.*/AuctionHouseBot.GUIDs = $GUIDS/" "$AC_CONF_DIR/worldserver.conf"
-    elif grep -q '^AuctionHouseBot.Buyer.Enabled' "$AC_CONF_DIR/worldserver.conf"; then
-        awk -v guids="$GUIDS" '
-            {
-                print
-                if ($0 ~ /^AuctionHouseBot\.Buyer\.Enabled/ && !inserted) {
-                    print ""
-                    print "# AHBot character GUIDs (from the '\''characters'\'' table)"
-                    print "# IMPORTANT: Use real characters, NOT Playerbots!"
-                    print "# Configure with: ./setup-ahbot.sh"
-                    print "AuctionHouseBot.GUIDs = " guids
-                    inserted=1
-                }
-            }
-        ' "$AC_CONF_DIR/worldserver.conf" > "$AC_CONF_DIR/worldserver.conf.tmp"
-        mv "$AC_CONF_DIR/worldserver.conf.tmp" "$AC_CONF_DIR/worldserver.conf"
-    else
-        printf '\nAuctionHouseBot.GUIDs = %s\n' "$GUIDS" >> "$AC_CONF_DIR/worldserver.conf"
+    if ! printf '%s' "$GUIDS" | grep -Eq '^[0-9]+(,[0-9]+)*$'; then
+        echo "[ERROR] Invalid GUID list: $GUIDS"
+        echo "Expected format: 123 or 123,456"
+        exit 1
     fi
-    echo "[OK] GUIDs updated. Restart the server."
+
+    AHBOT_CONF=""
+    for candidate in mod_ahbot.conf AuctionHouseBot.conf ahbot.conf; do
+        if [ -f "$AC_CONF_DIR/modules/$candidate" ]; then
+            AHBOT_CONF="$AC_CONF_DIR/modules/$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$AHBOT_CONF" ]; then
+        echo "[ERROR] AHBot module config not found in $AC_CONF_DIR/modules"
+        exit 1
+    fi
+
+    if grep -q '^AuctionHouseBot.GUIDs' "$AHBOT_CONF"; then
+        sed -i "s/^AuctionHouseBot.GUIDs.*/AuctionHouseBot.GUIDs = $GUIDS/" "$AHBOT_CONF"
+    else
+        printf '\nAuctionHouseBot.GUIDs = %s\n' "$GUIDS" >> "$AHBOT_CONF"
+    fi
+
+    echo "[OK] AHBot GUIDs updated in $AHBOT_CONF"
+    echo "[INFO] Restart worldserver or run: sudo systemctl restart acore-world"
 else
     echo "Cancelled."
 fi

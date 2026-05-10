@@ -5,7 +5,6 @@ source /vagrant/provision/scripts/00-env.sh
 
 AHBOT_ACCOUNT_NAME="${AHBOT_ACCOUNT_NAME:-ahbot}"
 AHBOT_ACCOUNT_PASS="${AHBOT_ACCOUNT_PASS:-ahbot123!}"
-AHBOT_CHARACTER_NAME="${AHBOT_CHARACTER_NAME:-Vendor}"
 
 echo "========================================"
 echo "Configuring Systemd"
@@ -241,20 +240,12 @@ get_account_id_by_name() {
 
 resolve_ahbot_guid_preferred() {
   local account_name="$1"
-  local character_name="$2"
   local account_id
   local guid
   local guids
 
   account_id="$(get_account_id_by_name "$account_name")"
   if [ -n "$account_id" ]; then
-    guid=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
-      "SELECT guid FROM acore_characters.characters WHERE account=${account_id} AND name='${character_name}' ORDER BY guid LIMIT 1;" 2>/dev/null || true)
-    if [ -n "${guid:-}" ]; then
-      printf '%s\n' "$guid"
-      return 0
-    fi
-
     guid=$(MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
       "SELECT guid FROM acore_characters.characters WHERE account=${account_id} ORDER BY guid LIMIT 1;" 2>/dev/null || true)
     if [ -n "${guid:-}" ]; then
@@ -277,11 +268,9 @@ resolve_ahbot_guid_preferred() {
 ensure_ahbot_bootstrap() {
   local account_name="$AHBOT_ACCOUNT_NAME"
   local account_pass="$AHBOT_ACCOUNT_PASS"
-  local character_name="$AHBOT_CHARACTER_NAME"
   local account_id
-  local character_help
 
-  echo "[INFO] Bootstrap AHBot: account='${account_name}', character='${character_name}'"
+  echo "[INFO] Bootstrap AHBot account: account='${account_name}'"
 
   if /home/vagrant/create-account.sh "$account_name" "$account_pass"; then
     echo "[OK] AHBot account created/updated: ${account_name}"
@@ -291,34 +280,19 @@ ensure_ahbot_bootstrap() {
 
   account_id="$(get_account_id_by_name "$account_name")"
   if [ -z "$account_id" ]; then
-    echo "[WARN] AHBot account not found in auth DB; trying global GUID fallback"
+    echo "[WARN] AHBot account not found in auth DB; GUID fallback will be used"
     return 0
   fi
 
   if MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
-      "SELECT 1 FROM acore_characters.characters WHERE account=${account_id} AND name='${character_name}' LIMIT 1;" | grep -q 1; then
-    echo "[OK] AHBot character already present: ${character_name} (account=${account_name})"
+      "SELECT 1 FROM acore_characters.characters WHERE account=${account_id} LIMIT 1;" | grep -q 1; then
+    echo "[OK] AHBot account already has at least one character."
     return 0
   fi
 
-  # AzerothCore does not always provide the '.character create' command.
-  # Avoid false warnings by detecting capability first.
-  character_help="$(worldserver_cmd_output ".help character" || true)"
-  if printf '%s' "$character_help" | grep -q 'character create'; then
-    if worldserver_cmd_try ".character create ${character_name} 1 1"; then
-      sleep 2
-      if MYSQL_PWD="$DB_PASS" mysql -u "$DB_USER" -h 127.0.0.1 -Nse \
-          "SELECT 1 FROM acore_characters.characters WHERE account=${account_id} AND name='${character_name}' LIMIT 1;" | grep -q 1; then
-        echo "[OK] AHBot character created: ${character_name}"
-      else
-        echo "[WARN] Character creation command sent but character not detected; GUID fallback will be used"
-      fi
-    else
-      echo "[WARN] AHBot character creation via worldserver unavailable; GUID fallback will be used"
-    fi
-  else
-    echo "[INFO] Command '.character create' unavailable on this core; GUID fallback will be used"
-  fi
+  echo "[INFO] AHBot account '${account_name}' has no character yet."
+  echo "[INFO] Create it with the WoW client, query its GUID, then run: acore-setup-ahbot <guid>"
+  echo "[INFO] Until then, AuctionHouseBot.GUIDs will use automatic fallback characters."
 }
 
 configure_ahbot_guids() {
@@ -331,7 +305,7 @@ configure_ahbot_guids() {
     return 0
   fi
 
-  if guids="$(resolve_ahbot_guid_preferred "$AHBOT_ACCOUNT_NAME" "$AHBOT_CHARACTER_NAME")"; then
+  if guids="$(resolve_ahbot_guid_preferred "$AHBOT_ACCOUNT_NAME")"; then
     ensure_conf_kv_local "$ahbot_conf" "AuctionHouseBot.GUIDs" "$guids"
     echo "[OK] AuctionHouseBot.GUIDs configured: $guids"
   else
