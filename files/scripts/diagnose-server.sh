@@ -53,6 +53,25 @@ service_report() {
     "$(systemctl is-enabled "$svc" 2>/dev/null || echo unknown)"
 }
 
+failed_units_report() {
+  local output
+
+  output="$(systemctl --failed --no-pager --plain 2>&1 || true)"
+  echo "-- systemctl failed units"
+
+  if printf '%s
+' "$output" | grep -qE '^[^[:space:]]+\.service[[:space:]]'; then
+    printf '%s
+' "$output"
+  elif printf '%s
+' "$output" | grep -q '0 loaded units listed'; then
+    echo "[OK] no failed systemd units"
+  else
+    printf '%s
+' "$output"
+  fi
+}
+
 process_report() {
   local proc="$1"
 
@@ -187,7 +206,7 @@ section "Systemd"
 service_report mysql
 service_report acore-auth
 service_report acore-world
-run_optional "systemctl failed" systemctl --failed --no-pager
+failed_units_report
 
 section "Processus"
 process_report mysqld
