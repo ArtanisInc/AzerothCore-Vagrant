@@ -14,6 +14,7 @@ Vagrant.configure("2") do |config|
   # Base configuration - Ubuntu 22.04 LTS
   config.vm.box = "bento/ubuntu-22.04"
   config.vm.hostname = "azerothcore"
+  config.vm.disk :disk, size: (ENV['VM_DISK_SIZE'] || "80GB"), primary: true
 
   # Network configuration
   # Port forwarding for authserver (3724) and worldserver (8085)

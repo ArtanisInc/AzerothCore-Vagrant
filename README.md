@@ -43,6 +43,7 @@ If `DB_PASS` is empty in `.env`, provisioning generates one and writes it back t
 ```env
 VM_RAM=8192
 VM_CPUS=4
+VM_DISK_SIZE=80GB
 
 DB_USER=acore
 DB_PASS=
