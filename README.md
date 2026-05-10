@@ -42,6 +42,7 @@ MOD_LEARN_SPELLS_REF=
 MOD_SOLO_LFG_REF=
 MOD_CHALLENGE_MODES_REF=
 MOD_RARE_DROPS_REF=fix
+MOD_MOUNT_SCALING_REF=
 MOD_PORTALS_IN_ALL_CAPITALS_REF=
 
 EXTERNAL_IP=
@@ -53,6 +54,7 @@ EXTERNAL_IP=
 - If `MYSQL_INNODB_BUFFER_POOL_SIZE` is empty, MySQL automatically allocates about 50% of `VM_RAM` to the InnoDB buffer pool while leaving headroom for the build and `worldserver`.
 - `DB_BACKUP_RETENTION` keeps the last N compressed backups per database (`0` disables rotation).
 - `EXTERNAL_IP` is used to configure the realm address.
+- `mod-mount-scaling` enables progressive mount speed scaling and imports SQL that lowers Apprentice Riding and apprentice ground mount requirements to level 1; clients may need to clear their WoW `Cache` folder after this SQL is applied.
 
 ---
 

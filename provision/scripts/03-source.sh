@@ -54,6 +54,7 @@ modules=(
   "mod-reagent-bank-account;https://github.com/Brian-Aldridge/mod-reagent-bank-account.git;${MOD_REAGENT_BANK_ACCOUNT_REF:-}"
   "mod-daily-reset;https://github.com/binboupan/mod-daily-reset.git;${MOD_DAILY_RESET_REF:-}"
   "mod-fly-anywhere;https://github.com/abracadaniel22/mod-fly-anywhere.git;${MOD_FLY_ANYWHERE_REF:-}"
+  "mod-mount-scaling;https://github.com/claudevandort/mod-mount-scaling.git;${MOD_MOUNT_SCALING_REF:-}"
   "portals-in-all-capitals;https://github.com/azerothcore/portals-in-all-capitals.git;${MOD_PORTALS_IN_ALL_CAPITALS_REF:-}"
 )
 
@@ -69,3 +70,9 @@ for item in "${modules[@]}"; do
       echo "[OK] Module $name already present."
     fi
 done
+
+challenge_modes_cpp="$AC_CODE_DIR/modules/mod-challenge-modes/src/ChallengeModes.cpp"
+if [ -f "$challenge_modes_cpp" ] && grep -q 'bool /\*applySickness\*/) override' "$challenge_modes_cpp"; then
+    sed -i 's/bool \/\*applySickness\*\/) override/bool\& \/\*applySickness\*\/) override/' "$challenge_modes_cpp"
+    echo "[OK] Applied mod-challenge-modes resurrection hook compatibility patch."
+fi
