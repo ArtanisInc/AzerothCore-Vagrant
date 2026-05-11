@@ -55,6 +55,11 @@ modules=(
   "mod-daily-reset;https://github.com/binboupan/mod-daily-reset.git;${MOD_DAILY_RESET_REF:-}"
   "mod-fly-anywhere;https://github.com/abracadaniel22/mod-fly-anywhere.git;${MOD_FLY_ANYWHERE_REF:-}"
   "mod-mount-scaling;https://github.com/claudevandort/mod-mount-scaling.git;${MOD_MOUNT_SCALING_REF:-}"
+  "mod-ale;https://github.com/azerothcore/mod-ale.git;${MOD_ALE_REF:-}"
+  "mod-quest-loot-party;https://github.com/pangolp/mod-quest-loot-party.git;${MOD_QUEST_LOOT_PARTY_REF:-}"
+  "mod-TimeIsTime;https://github.com/dunjeon/mod-TimeIsTime.git;${MOD_TIME_IS_TIME_REF:-}"
+  "mod-boss-announcer;https://github.com/azerothcore/mod-boss-announcer.git;${MOD_BOSS_ANNOUNCER_REF:-}"
+  "mod-auto-revive;https://github.com/azerothcore/mod-auto-revive.git;${MOD_AUTO_REVIVE_REF:-}"
   "portals-in-all-capitals;https://github.com/azerothcore/portals-in-all-capitals.git;${MOD_PORTALS_IN_ALL_CAPITALS_REF:-}"
 )
 

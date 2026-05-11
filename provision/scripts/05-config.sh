@@ -374,6 +374,11 @@ fi
 # Robust module configuration file resolution (case may vary)
 AHBOT_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod_ahbot.conf" "AuctionHouseBot.conf" "ahbot.conf" || true)"
 AUTOBALANCE_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "AutoBalance.conf" "mod_autobalance.conf" "autobalance.conf" || true)"
+ALE_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod_ale.conf" "ale.conf" || true)"
+QUEST_PARTY_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod-quest-loot-party.conf" "QuestParty.conf" "questparty.conf" "mod_quest_loot_party.conf" || true)"
+TIME_IS_TIME_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod-time_is_time.conf" "TimeIsTime.conf" "timeistime.conf" || true)"
+BOSS_ANNOUNCER_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "mod_boss_announcer.conf" "BossAnnouncer.conf" "boss_announcer.conf" || true)"
+AUTO_REVIVE_MODULE_CONF="$(resolve_module_conf "$AC_CONF_DIR/modules" "AutoRevive.conf" "autorevive.conf" "mod_auto_revive.conf" || true)"
 
 cd ..
 
@@ -405,6 +410,52 @@ ensure_conf_kv worldserver.conf "SkillGain.Gathering" "2"
 ensure_conf_kv worldserver.conf "SkillGain.Weapon" "5"
 ensure_conf_kv worldserver.conf "SkillGain.Defense" "5"
 echo "[OK] Rates patch applied"
+
+if [ -n "${TIME_IS_TIME_MODULE_CONF:-}" ]; then
+ensure_conf_kv "$TIME_IS_TIME_MODULE_CONF" "TimeIsTime.Enable" "1"
+ensure_conf_kv "$TIME_IS_TIME_MODULE_CONF" "TimeIsTime.Announce" "1"
+ensure_conf_kv "$TIME_IS_TIME_MODULE_CONF" "TimeIsTime.SpeedRate" "1.0"
+echo "[OK] TimeIsTime patch applied (${TIME_IS_TIME_MODULE_CONF})"
+else
+echo "[WARN] TimeIsTime config file not found in $AC_CONF_DIR/modules (candidates: mod-time_is_time.conf, TimeIsTime.conf, timeistime.conf)"
+fi
+
+if [ -n "${BOSS_ANNOUNCER_MODULE_CONF:-}" ]; then
+ensure_conf_kv "$BOSS_ANNOUNCER_MODULE_CONF" "Boss.Announcer.Enable" "1"
+ensure_conf_kv "$BOSS_ANNOUNCER_MODULE_CONF" "Boss.Announcer.Announce" "1"
+ensure_conf_kv "$BOSS_ANNOUNCER_MODULE_CONF" "Boss.Announcer.AnnounceWipe" "1"
+ensure_conf_kv "$BOSS_ANNOUNCER_MODULE_CONF" "Boss.Announcer.RemoveAuraUponKill" "0"
+echo "[OK] Boss Announcer patch applied (${BOSS_ANNOUNCER_MODULE_CONF})"
+else
+echo "[WARN] Boss Announcer config file not found in $AC_CONF_DIR/modules (candidates: mod_boss_announcer.conf, BossAnnouncer.conf, boss_announcer.conf)"
+fi
+
+
+if [ -n "${AUTO_REVIVE_MODULE_CONF:-}" ]; then
+ensure_conf_kv "$AUTO_REVIVE_MODULE_CONF" "AutoRevive.Enable" "1"
+ensure_conf_kv "$AUTO_REVIVE_MODULE_CONF" "AutoRevive.ZoneID" "0"
+echo "[OK] Auto Revive patch applied (${AUTO_REVIVE_MODULE_CONF})"
+else
+echo "[WARN] Auto Revive config file not found in $AC_CONF_DIR/modules (candidates: AutoRevive.conf, autorevive.conf, mod_auto_revive.conf)"
+fi
+
+if [ -n "${QUEST_PARTY_MODULE_CONF:-}" ]; then
+ensure_conf_kv "$QUEST_PARTY_MODULE_CONF" "QuestParty.Enable" "true"
+ensure_conf_kv "$QUEST_PARTY_MODULE_CONF" "QuestParty.Message" "true"
+echo "[OK] Quest Loot Party patch applied (${QUEST_PARTY_MODULE_CONF})"
+else
+echo "[WARN] Quest Loot Party config file not found in $AC_CONF_DIR/modules (candidates: mod-quest-loot-party.conf, QuestParty.conf, questparty.conf, mod_quest_loot_party.conf)"
+fi
+
+if [ -n "${ALE_MODULE_CONF:-}" ]; then
+ensure_conf_kv "$ALE_MODULE_CONF" "ALE.Enabled" "true"
+ensure_conf_kv "$ALE_MODULE_CONF" "ALE.ScriptPath" "\"lua_scripts\""
+ensure_conf_kv "$ALE_MODULE_CONF" "ALE.AutoReload" "false"
+mkdir -p "$AC_BIN_DIR/lua_scripts"
+echo "[OK] ALE Lua Engine patch applied (${ALE_MODULE_CONF})"
+else
+echo "[WARN] ALE config file not found in $AC_CONF_DIR/modules (candidates: mod_ale.conf, ale.conf)"
+fi
 
 if [ -n "${AHBOT_MODULE_CONF:-}" ]; then
 ensure_conf_kv "$AHBOT_MODULE_CONF" "AuctionHouseBot.DEBUG" "false"

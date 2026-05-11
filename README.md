@@ -88,10 +88,18 @@ MOD_REAGENT_BANK_ACCOUNT_REF=
 MOD_DAILY_RESET_REF=
 MOD_FLY_ANYWHERE_REF=
 MOD_MOUNT_SCALING_REF=
+MOD_ALE_REF=
+MOD_QUEST_LOOT_PARTY_REF=
+MOD_TIME_IS_TIME_REF=
+MOD_BOSS_ANNOUNCER_REF=
+MOD_AUTO_REVIVE_REF=
+ALE_LUA_VERSION=lua52
 MOD_PORTALS_IN_ALL_CAPITALS_REF=
 ```
 
 Each `MOD_*_REF` can pin that module to a branch, tag, or commit. Empty values use the module repository default branch, except where a project default is provided.
+
+`ALE_LUA_VERSION` selects the Lua runtime for `mod-ale` (`lua52` by default; supported: `luajit`, `lua51`, `lua52`, `lua53`, `lua54`).
 
 ### Realm and admin/SOAP
 
@@ -135,6 +143,11 @@ Provisioning creates or updates the AHBot account. It does **not** create the AH
 | `mod-daily-reset`               | Adds daily reset utilities.                                                                                                                                                                         |
 | `mod-fly-anywhere`              | Allows flying in more zones than stock WotLK rules.                                                                                                                                                 |
 | `mod-mount-scaling`             | Adds progressive mount speed scaling by level. Its SQL lowers Apprentice Riding and apprentice ground mount requirements to level 1. Clear the WoW client `Cache` folder after this SQL is applied. |
+| `mod-ale`                     | Adds the AzerothCore Lua Engine for custom server-side Lua scripts. ALE is not compatible with standard Eluna scripts.                                                             |
+| `mod-quest-loot-party`        | Shares eligible quest-item loot across party members so grouped players do not need to repeat the same kills for each member.                                                       |
+| `mod-TimeIsTime`               | Adjusts the in-game day/night cycle speed while keeping blizzlike `1.0` speed by default.                                                                                          |
+| `mod-boss-announcer`           | Announces world-boss kills and optional wipe messages in world chat.                                                                                                                |
+| `mod-auto-revive`             | Automatically revives GM accounts before death, globally by default or limited to a configured zone.                                                                                |
 | `portals-in-all-capitals`       | Adds portal access in all capital cities.                                                                                                                                                           |
 
 ---

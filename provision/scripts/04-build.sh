@@ -15,6 +15,16 @@ if ! [[ "$CPU_COUNT" =~ ^[0-9]+$ ]] || [ "$CPU_COUNT" -lt 1 ]; then
     CPU_COUNT=1
 fi
 
+ALE_LUA_VERSION="${ALE_LUA_VERSION:-lua52}"
+case "$ALE_LUA_VERSION" in
+    luajit|lua51|lua52|lua53|lua54)
+        ;;
+    *)
+        echo "[ERROR] Invalid ALE_LUA_VERSION: $ALE_LUA_VERSION (expected: luajit, lua51, lua52, lua53, lua54)"
+        exit 1
+        ;;
+esac
+
 # Configuration CMake
 echo "--- Configuration CMake ---"
 cmake ../ -DCMAKE_INSTALL_PREFIX="$AC_INSTALL_DIR" \
@@ -25,6 +35,7 @@ cmake ../ -DCMAKE_INSTALL_PREFIX="$AC_INSTALL_DIR" \
       -DSCRIPTS=static \
       -DMODULES=static \
       -DMODULE_MOD_PLAYERBOTS=static \
+      -DLUA_VERSION="$ALE_LUA_VERSION" \
       -DCMAKE_C_FLAGS="-O3 -march=native" \
       -DCMAKE_CXX_FLAGS="-O3 -march=native"
 
